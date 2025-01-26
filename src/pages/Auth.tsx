@@ -1,38 +1,31 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Music } from "lucide-react";
 
 const Auth = () => {
-  const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [username, setUsername] = useState("");
+  const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
-  const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setLoading(true);
 
     try {
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: {
-            data: {
-              username,
-            },
-          },
         });
         if (error) throw error;
         toast({
           title: "Success!",
-          description: "Please check your email to verify your account.",
+          description: "Check your email to confirm your account.",
         });
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -40,7 +33,10 @@ const Auth = () => {
           password,
         });
         if (error) throw error;
-        navigate("/");
+        toast({
+          title: "Welcome back!",
+          description: "Successfully signed in.",
+        });
       }
     } catch (error: any) {
       toast({
@@ -49,92 +45,50 @@ const Auth = () => {
         description: error.message,
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold">
-            {isSignUp ? "Create an account" : "Welcome back"}
-          </h2>
-          <p className="mt-2 text-muted-foreground">
-            {isSignUp
-              ? "Sign up to start streaming music"
-              : "Sign in to your account"}
-          </p>
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="w-full max-w-md p-8 space-y-6 border rounded-lg">
+        <div className="flex items-center justify-center space-x-2 mb-8">
+          <Music className="h-8 w-8" />
+          <h1 className="text-2xl font-bold">Retrospace</h1>
         </div>
-
-        <form onSubmit={handleAuth} className="mt-8 space-y-6">
-          {isSignUp && (
-            <div>
-              <label htmlFor="username" className="block text-sm font-medium">
-                Username
-              </label>
-              <Input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required={isSignUp}
-                className="mt-1"
-                placeholder="Enter your username"
-              />
-            </div>
-          )}
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium">
-              Email
-            </label>
+        <form onSubmit={handleAuth} className="space-y-4">
+          <div className="space-y-2">
             <Input
-              id="email"
               type="email"
+              placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1"
-              placeholder="Enter your email"
             />
           </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium">
-              Password
-            </label>
+          <div className="space-y-2">
             <Input
-              id="password"
               type="password"
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="mt-1"
-              placeholder="Enter your password"
             />
           </div>
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isLoading}
-          >
-            {isLoading
-              ? "Loading..."
-              : isSignUp
-              ? "Create account"
-              : "Sign in"}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
           </Button>
         </form>
-
         <div className="text-center">
-          <Button
-            variant="link"
+          <button
+            type="button"
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-primary"
+            className="text-sm text-muted-foreground hover:underline"
           >
             {isSignUp
               ? "Already have an account? Sign in"
               : "Don't have an account? Sign up"}
-          </Button>
+          </button>
         </div>
       </div>
     </div>
