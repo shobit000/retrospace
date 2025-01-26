@@ -33,6 +33,36 @@ export type Database = {
         }
         Relationships: []
       }
+      songs: {
+        Row: {
+          artist: string
+          created_at: string
+          duration: number | null
+          file_path: string
+          id: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          artist: string
+          created_at?: string
+          duration?: number | null
+          file_path: string
+          id?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          artist?: string
+          created_at?: string
+          duration?: number | null
+          file_path?: string
+          id?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

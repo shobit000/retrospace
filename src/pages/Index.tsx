@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Music, Upload, User } from "lucide-react";
+import { Search, Music, User } from "lucide-react";
 import { useState } from "react";
 import AudioPlayer from "@/components/AudioPlayer";
 import { AuthButton } from "@/components/AuthButton";
+import { UploadDialog } from "@/components/UploadDialog";
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,10 +42,7 @@ const Index = () => {
                 className="pl-10"
               />
             </div>
-            <Button>
-              <Upload className="h-4 w-4 mr-2" />
-              Upload
-            </Button>
+            <UploadDialog />
           </div>
         </div>
 
@@ -52,7 +50,6 @@ const Index = () => {
         <section className="mb-8">
           <h2 className="text-2xl font-bold mb-4">Featured Tracks</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Placeholder for featured tracks */}
             <div className="p-4 border rounded-lg">
               <div className="aspect-square bg-muted rounded-md mb-2"></div>
               <h3 className="font-medium">Track Title</h3>
@@ -75,7 +72,6 @@ const Index = () => {
         <section>
           <h2 className="text-2xl font-bold mb-4">Recent Uploads</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Placeholder for recent uploads */}
             <div className="p-4 border rounded-lg">
               <div className="aspect-square bg-muted rounded-md mb-2"></div>
               <h3 className="font-medium">Track Title</h3>
