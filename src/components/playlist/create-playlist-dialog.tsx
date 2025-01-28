@@ -28,9 +28,17 @@ export const CreatePlaylistDialog = () => {
 
     try {
       setIsLoading(true);
+      
+      // Get the current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) throw userError;
+      if (!user) throw new Error("No user found");
+
       const { error } = await supabase.from("playlists").insert({
         title: title.trim(),
         description: description.trim() || null,
+        user_id: user.id,
       });
 
       if (error) throw error;
@@ -42,11 +50,11 @@ export const CreatePlaylistDialog = () => {
       setOpen(false);
       setTitle("");
       setDescription("");
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to create playlist",
+        description: error.message || "Failed to create playlist",
       });
     } finally {
       setIsLoading(false);
@@ -87,7 +95,7 @@ export const CreatePlaylistDialog = () => {
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isLoading || !title.trim()}>
-              Create Playlist
+              {isLoading ? "Creating..." : "Create Playlist"}
             </Button>
           </DialogFooter>
         </form>
