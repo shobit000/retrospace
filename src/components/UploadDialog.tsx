@@ -58,21 +58,12 @@ export function UploadDialog() {
       formData.append("artist", artist);
       formData.append("userId", user.id);
 
-      const response = await fetch(
-        `${window.location.origin}/functions/v1/upload-song`,
-        {
-          method: "POST",
-          body: formData,
-          headers: {
-            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-          },
-        }
-      );
+      const { data, error } = await supabase.functions.invoke('upload-song', {
+        body: formData,
+      });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to upload song");
+      if (error) {
+        throw error;
       }
 
       toast({
