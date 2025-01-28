@@ -1,13 +1,35 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Music, User } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AudioPlayer from "@/components/AudioPlayer";
 import { AuthButton } from "@/components/AuthButton";
 import { UploadDialog } from "@/components/UploadDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Fetch songs from Supabase
+  const { data: songs, isLoading } = useQuery({
+    queryKey: ['songs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('songs')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Filter songs based on search query
+  const filteredSongs = songs?.filter(song => 
+    song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    song.artist.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -52,103 +74,59 @@ const Index = () => {
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-6 flex items-center">
             <span className="bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
-              Featured Tracks
+              {searchQuery ? 'Search Results' : 'Featured Tracks'}
             </span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                title: "Synthwave Dreams",
-                artist: "Neon Rider",
-                image: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b",
-              },
-              {
-                title: "Digital Sunset",
-                artist: "Cyber Pulse",
-                image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7",
-              },
-              {
-                title: "Retro Nights",
-                artist: "Pixel Wave",
-                image: "https://images.unsplash.com/photo-1500673922987-e212871fec22",
-              },
-            ].map((track, index) => (
-              <div
-                key={index}
-                className="group bg-card hover:bg-accent transition-colors duration-300 rounded-xl overflow-hidden"
-              >
-                <div className="relative">
-                  <img
-                    src={track.image}
-                    alt={track.title}
-                    className="w-full aspect-square object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <Button
-                    size="icon"
-                    className="absolute bottom-4 right-4 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  >
-                    <Music className="h-4 w-4" />
-                  </Button>
+            {isLoading ? (
+              // Loading skeleton
+              Array(6).fill(null).map((_, index) => (
+                <div key={index} className="animate-pulse bg-card rounded-xl overflow-hidden">
+                  <div className="bg-accent h-64"></div>
+                  <div className="p-4">
+                    <div className="h-4 bg-accent rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-accent rounded w-1/2"></div>
+                  </div>
                 </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-lg">{track.title}</h3>
-                  <p className="text-sm text-muted-foreground">{track.artist}</p>
+              ))
+            ) : filteredSongs.length > 0 ? (
+              filteredSongs.map((song, index) => (
+                <div
+                  key={song.id}
+                  className="group bg-card hover:bg-accent transition-colors duration-300 rounded-xl overflow-hidden"
+                >
+                  <div className="relative">
+                    <img
+                      src={`https://picsum.photos/seed/${song.id}/400`}
+                      alt={song.title}
+                      className="w-full aspect-square object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <Button
+                      size="icon"
+                      className="absolute bottom-4 right-4 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    >
+                      <Music className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-lg">{song.title}</h3>
+                    <p className="text-sm text-muted-foreground">{song.artist}</p>
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-12">
+                <Music className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No songs found</h3>
+                <p className="text-muted-foreground">
+                  {searchQuery ? "Try searching with different keywords" : "Start by uploading some tracks!"}
+                </p>
               </div>
-            ))}
+            )}
           </div>
         </section>
 
-        {/* Recent Uploads */}
-        <section>
-          <h2 className="text-2xl font-bold mb-6 flex items-center">
-            <span className="bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
-              Recent Uploads
-            </span>
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                title: "Cyber Groove",
-                artist: "Data Stream",
-                image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158",
-              },
-              {
-                title: "Electric Dreams",
-                artist: "Virtual Mind",
-                image: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b",
-              },
-              {
-                title: "Binary Sunset",
-                artist: "Code Runner",
-                image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7",
-              },
-            ].map((track, index) => (
-              <div
-                key={index}
-                className="group bg-card hover:bg-accent transition-colors duration-300 rounded-xl overflow-hidden"
-              >
-                <div className="relative">
-                  <img
-                    src={track.image}
-                    alt={track.title}
-                    className="w-full aspect-square object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <Button
-                    size="icon"
-                    className="absolute bottom-4 right-4 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  >
-                    <Music className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-lg">{track.title}</h3>
-                  <p className="text-sm text-muted-foreground">{track.artist}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* Recent Uploads section can be removed since we're now showing actual data */}
       </main>
 
       {/* Audio Player */}
