@@ -1,12 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Music, User } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import AudioPlayer from "@/components/AudioPlayer";
 import { AuthButton } from "@/components/AuthButton";
 import { UploadDialog } from "@/components/UploadDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { CreatePlaylistDialog } from "@/components/playlist/create-playlist-dialog";
+import { PlaylistCard } from "@/components/playlist/playlist-card";
+import { useToast } from "@/hooks/use-toast";
 
 interface Song {
   id: string;
@@ -18,13 +23,28 @@ interface Song {
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
+  const { toast } = useToast();
 
   // Fetch songs from Supabase
-  const { data: songs, isLoading } = useQuery({
+  const { data: songs, isLoading: songsLoading } = useQuery({
     queryKey: ['songs'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('songs')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Fetch playlists
+  const { data: playlists, isLoading: playlistsLoading } = useQuery({
+    queryKey: ['playlists'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('playlists')
         .select('*')
         .order('created_at', { ascending: false });
       
@@ -41,6 +61,10 @@ const Index = () => {
 
   const handleSongClick = (song: Song) => {
     setSelectedSong(song);
+    toast({
+      title: "Now Playing",
+      description: `${song.title} by ${song.artist}`,
+    });
   };
 
   return (
@@ -65,7 +89,7 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 pt-20 pb-32">
-        {/* Search Section */}
+        {/* Search and Actions Section */}
         <div className="max-w-xl mx-auto mb-12">
           <div className="flex items-center space-x-2">
             <div className="relative flex-1">
@@ -78,57 +102,89 @@ const Index = () => {
                 className="pl-10 bg-secondary/50"
               />
             </div>
+            <CreatePlaylistDialog />
             <UploadDialog />
           </div>
         </div>
 
-        {/* Featured Section */}
-        <section className="mb-12">
-          <h2 className="text-2xl font-bold mb-6 flex items-center">
-            <span className="bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
-              {searchQuery ? 'Search Results' : 'Featured Tracks'}
-            </span>
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {isLoading ? (
-              // Loading skeleton
-              Array(6).fill(null).map((_, index) => (
-                <div key={index} className="animate-pulse bg-card rounded-xl overflow-hidden">
-                  <div className="bg-accent h-64"></div>
-                  <div className="p-4">
-                    <div className="h-4 bg-accent rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-accent rounded w-1/2"></div>
-                  </div>
-                </div>
-              ))
-            ) : filteredSongs.length > 0 ? (
-              filteredSongs.map((song) => (
-                <div
-                  key={song.id}
-                  className="group bg-card hover:bg-accent transition-colors duration-300 rounded-xl overflow-hidden cursor-pointer"
-                  onClick={() => handleSongClick(song)}
-                >
-                  <div className="relative">
-                    <img
-                      src={`https://picsum.photos/seed/${song.id}/400`}
-                      alt={song.title}
-                      className="w-full aspect-square object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                    <Button
-                      size="icon"
-                      className="absolute bottom-4 right-4 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    >
-                      <Music className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-lg">{song.title}</h3>
-                    <p className="text-sm text-muted-foreground">{song.artist}</p>
-                  </div>
-                </div>
-              ))
+        <ErrorBoundary>
+          {/* Playlists Section */}
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-6">
+              <span className="bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+                Your Playlists
+              </span>
+            </h2>
+            {playlistsLoading ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner />
+              </div>
+            ) : playlists && playlists.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {playlists.map((playlist) => (
+                  <PlaylistCard
+                    key={playlist.id}
+                    playlist={playlist}
+                    onPlay={() => {
+                      // TODO: Implement playlist playback
+                      toast({
+                        title: "Coming Soon",
+                        description: "Playlist playback will be available soon!",
+                      });
+                    }}
+                  />
+                ))}
+              </div>
             ) : (
-              <div className="col-span-3 text-center py-12">
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">
+                  No playlists yet. Create one to get started!
+                </p>
+              </div>
+            )}
+          </section>
+
+          {/* Songs Section */}
+          <section>
+            <h2 className="text-2xl font-bold mb-6">
+              <span className="bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
+                {searchQuery ? 'Search Results' : 'All Songs'}
+              </span>
+            </h2>
+            {songsLoading ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner />
+              </div>
+            ) : filteredSongs.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredSongs.map((song) => (
+                  <div
+                    key={song.id}
+                    className="group bg-card hover:bg-accent transition-colors duration-300 rounded-xl overflow-hidden cursor-pointer"
+                    onClick={() => handleSongClick(song)}
+                  >
+                    <div className="relative">
+                      <img
+                        src={`https://picsum.photos/seed/${song.id}/400`}
+                        alt={song.title}
+                        className="w-full aspect-square object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <Button
+                        size="icon"
+                        className="absolute bottom-4 right-4 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      >
+                        <Music className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-semibold text-lg">{song.title}</h3>
+                      <p className="text-sm text-muted-foreground">{song.artist}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
                 <Music className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No songs found</h3>
                 <p className="text-muted-foreground">
@@ -136,8 +192,8 @@ const Index = () => {
                 </p>
               </div>
             )}
-          </div>
-        </section>
+          </section>
+        </ErrorBoundary>
       </main>
 
       {/* Audio Player */}
