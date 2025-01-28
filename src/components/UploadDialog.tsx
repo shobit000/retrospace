@@ -1,8 +1,8 @@
-import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -10,32 +10,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload } from "lucide-react";
+import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function UploadDialog() {
-  const [isUploading, setIsUploading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [artist, setArtist] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-    }
-  };
+  const queryClient = useQueryClient();
 
   const handleUpload = async () => {
-    if (!file || !title || !artist) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all fields and select a file.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       setIsUploading(true);
 
@@ -43,13 +32,10 @@ export function UploadDialog() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to upload songs.",
-          variant: "destructive",
-        });
-        return;
+      if (!user) throw new Error("User not authenticated");
+
+      if (!file || !title || !artist) {
+        throw new Error("Please fill in all fields");
       }
 
       const formData = new FormData();
@@ -75,12 +61,17 @@ export function UploadDialog() {
       setTitle("");
       setArtist("");
       setFile(null);
-    } catch (error) {
+      setIsOpen(false);
+
+      // Invalidate and refetch songs query
+      await queryClient.invalidateQueries({ queryKey: ['songs'] });
+
+    } catch (error: any) {
       console.error("Upload error:", error);
       toast({
-        title: "Upload failed",
-        description: "There was an error uploading your song. Please try again.",
         variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to upload song",
       });
     } finally {
       setIsUploading(false);
@@ -88,19 +79,22 @@ export function UploadDialog() {
   };
 
   return (
-    <Dialog>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button>
-          <Upload className="h-4 w-4 mr-2" />
+          <Upload className="mr-2 h-4 w-4" />
           Upload
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Upload a Song</DialogTitle>
+          <DialogDescription>
+            Add a new song to your collection. Fill in the details below.
+          </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          <div>
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
             <Label htmlFor="title">Title</Label>
             <Input
               id="title"
@@ -109,7 +103,7 @@ export function UploadDialog() {
               placeholder="Enter song title"
             />
           </div>
-          <div>
+          <div className="grid gap-2">
             <Label htmlFor="artist">Artist</Label>
             <Input
               id="artist"
@@ -118,21 +112,19 @@ export function UploadDialog() {
               placeholder="Enter artist name"
             />
           </div>
-          <div>
-            <Label htmlFor="file">Music File</Label>
+          <div className="grid gap-2">
+            <Label htmlFor="file">File</Label>
             <Input
               id="file"
               type="file"
               accept="audio/*"
-              onChange={handleFileChange}
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
             />
           </div>
-          <Button
-            className="w-full"
-            onClick={handleUpload}
-            disabled={isUploading}
-          >
-            {isUploading ? "Uploading..." : "Upload Song"}
+        </div>
+        <div className="flex justify-end">
+          <Button onClick={handleUpload} disabled={isUploading}>
+            {isUploading ? "Uploading..." : "Upload"}
           </Button>
         </div>
       </DialogContent>
