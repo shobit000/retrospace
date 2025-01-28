@@ -8,8 +8,16 @@ import { UploadDialog } from "@/components/UploadDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
+interface Song {
+  id: string;
+  title: string;
+  artist: string;
+  file_path: string;
+}
+
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
 
   // Fetch songs from Supabase
   const { data: songs, isLoading } = useQuery({
@@ -30,6 +38,10 @@ const Index = () => {
     song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     song.artist.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
+
+  const handleSongClick = (song: Song) => {
+    setSelectedSong(song);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -90,10 +102,11 @@ const Index = () => {
                 </div>
               ))
             ) : filteredSongs.length > 0 ? (
-              filteredSongs.map((song, index) => (
+              filteredSongs.map((song) => (
                 <div
                   key={song.id}
-                  className="group bg-card hover:bg-accent transition-colors duration-300 rounded-xl overflow-hidden"
+                  className="group bg-card hover:bg-accent transition-colors duration-300 rounded-xl overflow-hidden cursor-pointer"
+                  onClick={() => handleSongClick(song)}
                 >
                   <div className="relative">
                     <img
@@ -125,12 +138,10 @@ const Index = () => {
             )}
           </div>
         </section>
-
-        {/* Recent Uploads section can be removed since we're now showing actual data */}
       </main>
 
       {/* Audio Player */}
-      <AudioPlayer />
+      <AudioPlayer selectedSong={selectedSong} />
     </div>
   );
 };

@@ -1,12 +1,50 @@
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Play, Pause, SkipBack, SkipForward, Volume2 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
-const AudioPlayer = () => {
+interface Song {
+  id: string;
+  title: string;
+  artist: string;
+  file_path: string;
+}
+
+interface AudioPlayerProps {
+  selectedSong?: Song | null;
+}
+
+const AudioPlayer = ({ selectedSong }: AudioPlayerProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState([100]);
+  const [songUrl, setSongUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    const fetchSongUrl = async () => {
+      if (selectedSong?.file_path) {
+        try {
+          const { data } = await supabase.storage
+            .from('songs')
+            .createSignedUrl(selectedSong.file_path, 3600); // URL valid for 1 hour
+
+          if (data?.signedUrl) {
+            setSongUrl(data.signedUrl);
+            // Reset playing state when new song is selected
+            setIsPlaying(false);
+            if (audioRef.current) {
+              audioRef.current.currentTime = 0;
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching song URL:', error);
+        }
+      }
+    };
+
+    fetchSongUrl();
+  }, [selectedSong]);
 
   const togglePlay = () => {
     if (audioRef.current) {
@@ -19,14 +57,31 @@ const AudioPlayer = () => {
     }
   };
 
+  // Update volume when slider changes
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume[0] / 100;
+    }
+  }, [volume]);
+
+  if (!selectedSong) {
+    return null;
+  }
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 bg-muted rounded"></div>
+          <div className="w-12 h-12 bg-muted rounded">
+            <img
+              src={`https://picsum.photos/seed/${selectedSong.id}/200`}
+              alt={selectedSong.title}
+              className="w-full h-full object-cover rounded"
+            />
+          </div>
           <div>
-            <h4 className="font-medium">Track Title</h4>
-            <p className="text-sm text-muted-foreground">Artist Name</p>
+            <h4 className="font-medium">{selectedSong.title}</h4>
+            <p className="text-sm text-muted-foreground">{selectedSong.artist}</p>
           </div>
         </div>
         
@@ -56,8 +111,7 @@ const AudioPlayer = () => {
           />
         </div>
 
-        <audio ref={audioRef}>
-          <source src="" type="audio/mpeg" />
+        <audio ref={audioRef} src={songUrl || ''}>
           Your browser does not support the audio element.
         </audio>
       </div>
